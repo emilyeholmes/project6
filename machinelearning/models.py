@@ -72,9 +72,9 @@ class RegressionModel(object):
         self.batch_size = 200
         self.learning_rate = 0.05
         self.w1 = nn.Parameter(1, self.layer_size)
-        self.w2 = nn.Parameter(1, self.layer_size)
+        self.w2 = nn.Parameter(self.layer_size, 1)
         self.b1 = nn.Parameter(1, self.layer_size)
-        self.b2 = nn.Parameter(1, self.layer_size)
+        self.b2 = nn.Parameter(1, 1)
 
     def run(self, x):
         """
@@ -108,18 +108,17 @@ class RegressionModel(object):
         "*** YOUR CODE HERE ***"
         average_loss = float("inf")
         while average_loss > 0.02:
-            batch_size = 1
             sum_loss = 0
             count = 0
-            for x, y in dataset.iterate_once(batch_size):
+            for x, y in dataset.iterate_once(self.batch_size):
                 loss = self.get_loss(x, y)
                 if nn.as_scalar(loss) > 0.02:
                     grad = nn.gradients(loss, [self.w1, self.w2, self.b1, self.b2])
-                    self.w1 += grad[0] * self.learning_rate
-                    self.w2 += grad[1] * self.learning_rate
-                    self.b1 += grad[2] * self.learning_rate
-                    self.b2 += grad[3] * self.learning_rate
-                sum_loss += loss
+                    self.w1.update(grad[0], -self.learning_rate)
+                    self.w2.update(grad[1], -self.learning_rate)
+                    self.b1.update(grad[2], -self.learning_rate)
+                    self.b2.update(grad[3], -self.learning_rate)
+                sum_loss += nn.as_scalar(loss)
                 count += 1
             average_loss = sum_loss / count
             
