@@ -212,6 +212,20 @@ class LanguageIDModel(object):
 
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        self.layer_size = 120
+        self.batch_size = 50
+        self.learning_rate = 0.17
+        self.w1 = nn.Parameter(self.num_chars, self.layer_size)
+        self.w2 = nn.Parameter(self.layer_size, self.layer_size)
+        self.b1 = nn.Parameter(1, self.layer_size)
+        self.b2 = nn.Parameter(1, self.layer_size)
+        self.Wh1 = nn.Parameter(self.layer_size, self.layer_size)
+        self.Wh2 = nn.Parameter(self.layer_size, self.layer_size)
+        self.bh1 = nn.Parameter(1, self.layer_size)
+        self.bh2 = nn.Parameter(1, self.layer_size)
+        self.Wlang = nn.Parameter(self.layer_size, 5) # 5 languages
+        self.blang = nn.Parameter(1, 5) 
+        
 
     def run(self, xs):
         """
@@ -242,7 +256,28 @@ class LanguageIDModel(object):
             A node with shape (batch_size x 5) containing predicted scores
                 (also called logits)
         """
-        "*** YOUR CODE HERE ***"
+        def f_initial(x):
+            z0 = nn.ReLU(nn.AddBias(nn.Linear(x, self.w1), self.b1))
+            return nn.AddBias(nn.Linear(z0, self.w2), self.b2)
+        
+        def f_i(x, h):
+            z = nn.ReLU(nn.AddBias(nn.Add(nn.Linear(x, self.w1), nn.Linear(h, self.Wh1)), self.bh1))
+            z = nn.AddBias(nn.Linear(z, self.Wh2), self.bh2)
+            return nn.ReLU(z)
+
+        Wx = nn.Parameter(1, self.layer_size)
+
+        first = True
+        for x in xs:
+            if first:
+                h_i = f_initial(x)
+                first = False
+            else:
+                h_i = f_i(x, h_i)
+
+        # Language classification
+        return nn.AddBias(nn.Linear(h_i, self.Wlang), self.blang)
+            
 
     def get_loss(self, xs, y):
         """
@@ -258,10 +293,25 @@ class LanguageIDModel(object):
             y: a node with shape (batch_size x 5)
         Returns: a loss node
         """
-        "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(xs), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while dataset.get_validation_accuracy() < 0.85:
+            for x, y in dataset.iterate_once(self.batch_size):
+                loss = self.get_loss(x, y)
+                if nn.as_scalar(loss) > 0.185:
+                    grad = nn.gradients(loss, [self.w1, self.w2, self.b1, self.b2, self.Wh1, self.Wh2, self.bh1, self.bh2, self.Wlang, self.blang])
+                    self.w1.update(grad[0], -self.learning_rate)
+                    self.w2.update(grad[1], -self.learning_rate)
+                    self.b1.update(grad[2], -self.learning_rate)
+                    self.b2.update(grad[3], -self.learning_rate)
+                    self.Wh1.update(grad[4], -self.learning_rate)
+                    self.Wh2.update(grad[5], -self.learning_rate)
+                    self.bh1.update(grad[6], -self.learning_rate)
+                    self.bh2.update(grad[7], -self.learning_rate)
+                    self.Wlang.update(grad[8], -self.learning_rate)
+                    self.blang.update(grad[9], -self.learning_rate)
