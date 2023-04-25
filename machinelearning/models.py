@@ -140,14 +140,13 @@ class DigitClassificationModel(object):
     """
     def __init__(self):
         # Initialize your model parameters here
-        self.layer_size = 20
+        self.layer_size = 200
         self.batch_size = 100
-        self.learning_rate = 0.45
+        self.learning_rate = 0.4
         self.w1 = nn.Parameter(784, self.layer_size)
         self.w2 = nn.Parameter(self.layer_size, 10)
         self.b1 = nn.Parameter(1, self.layer_size)
         self.b2 = nn.Parameter(1, 10)
-
     def run(self, x):
         """
         Runs the model for a batch of examples.
